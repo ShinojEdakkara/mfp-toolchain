@@ -103,7 +103,7 @@ services:
           PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
           PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
           PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
-sample-mfpdevops:
+  sample-mfpdevops:
     service_id: pipeline
     parameters:
       services:
@@ -121,7 +121,7 @@ sample-mfpdevops:
           PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
           PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
           PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
-      execute: true    
+        execute: true
   webide:
     service_id: orion
 form:

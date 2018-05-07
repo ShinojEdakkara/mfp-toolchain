@@ -15,6 +15,7 @@ template:
     - sample-mfp-service-delete
     - sample-repo
     - test-repo
+    - sample-mfpdevops
   info:
     git url: >-
       [https://github.com/ShinojEdakkara/mfp80_toolchain](https://github.com/ShinojEdakkara/mfp80_toolchain)
@@ -49,7 +50,7 @@ services:
       ui-pipeline: true
       configuration:
         content:
-          $text: mfpcreate.yml 
+          $text: mfpcreate.yml
         env:
           CF_APP_NAME: '{{form.pipeline.parameters.prod-app-name}}'
           PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
@@ -62,7 +63,7 @@ services:
       ui-pipeline: true
       configuration:
         content:
-          $text: mfpdelete.yml 
+          $text: mfpdelete.yml
         env:
           CF_APP_NAME: '{{form.pipeline.parameters.prod-app-name}}'
           PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
@@ -102,6 +103,25 @@ services:
           PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
           PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
           PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
+sample-mfpdevops:
+    service_id: pipeline
+    parameters:
+      services:
+        - sample-repo
+        - test-repo
+      name: 'devops-{{services.sample-repo.parameters.repo_name}}'
+      ui-pipeline: true
+      configuration:
+        content:
+          $text: devops.yml
+        env:
+          SAMPLE_REPO: sample-repo
+          TEST_REPO: test-repo
+          CF_APP_NAME: '{{form.pipeline.parameters.prod-app-name}}'
+          PROD_SPACE_NAME: '{{form.pipeline.parameters.prod-space}}'
+          PROD_ORG_NAME: '{{form.pipeline.parameters.prod-organization}}'
+          PROD_REGION_ID: '{{form.pipeline.parameters.prod-region}}'
+      execute: true    
   webide:
     service_id: orion
 form:

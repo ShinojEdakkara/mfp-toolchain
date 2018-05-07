@@ -1,0 +1,329 @@
+---
+stages:
+- name: Setup MFP
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: Deploy
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: MFP80DevOps
+    script: |-
+      #!/bin/bash
+            token=$(cf oauth-token | awk '{print $2}')
+            json={\"deploy\":\"true\",\"name\":\"$INSTANCE_NAME\",\"token\":\"$token\"}
+            echo "Input: $json"
+            cf cs "Mobile Foundation" Developer $INSTANCE_NAME -c $json
+            echo "Created Service Instance"
+            sleep 1m
+            cf create-service-key $INSTANCE_NAME Credentials-1
+            echo "Created Service Keys"
+            credentials=$(cf service-key $INSTANCE_NAME Credentials-1)
+            echo "Credentials: $credentials"
+            password=$(echo $credentials | grep \"password\": | awk -F "\"password\": " '{print $2 }' | awk -F , '{print $1 }' | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/')
+            echo "Password: $password"
+            url=$(echo $credentials | grep \"url\": | awk -F "\"url\": " '{print $2 }' | awk -F , '{print $1 }' | sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/')
+            echo "URL: $url"
+            user=$(echo $credentials | grep \"user\": | awk -F "\"user\": " '{print $2 }' | awk -F , '{print $1 }' | awk -F \  '{print $1 }'| sed 's/.\(.*\)/\1/' | sed 's/\(.*\)./\1/')
+            echo "User: $user"
+            until $(curl --output /dev/null --silent --head --fail $url/mfpconsole); do
+              printf '.'
+              sleep 5
+            done
+            # Deploying the confidential client
+            curl -u $user:$password -X PUT -H "Content-Type: application/json" -d '{"clients":[{"id":"test","displayName":"Test","secret":"test","allowedScope":"*"},{"id": "admin","displayName": "admin","secret": "darwIn$hfr","allowedScope": "push.* mfp.admin.plugins settings.read"},{"id": "push","displayName": "push","secret": "darwIn$hfr","allowedScope": "authorization.introspect"}]}' $url/mfpadmin/management-apis/2.0/runtimes/mfp/confidentialclients
+            exit
+- name: AdapterBuild
+  inputs:
+  - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
+    type: git
+    branch: master
+    service: ${SAMPLE_REPO}
+    dir_name: null
+  triggers:
+  - type: commit
+  jobs:
+  - name: Build
+    type: builder
+    artifact_dir: ''
+    build_type: npm
+    script: |-
+      #!/bin/bash
+      # To use Node.js 6.7.0, uncomment the following line:
+      export PATH=/opt/IBM/node-v6.7.0/bin:$PATH
+      echo "#### npm install -g mfpdev-cli"
+      npm install -g mfpdev-cli
+      echo "#### mfpdev --version"
+      mfpdev --version
+      echo "#### cd adapters/JavaAdapter"
+      cd adapters/JavaAdapter
+      echo "#### Build the adapter : mfpdev adapter build"
+      mfpdev adapter build
+- name: AdapterDeploy
+  inputs:
+  - type: job
+    stage: AdapterBuild
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: DeployAdapter
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: adapters-tool-chain-mfp-cloud
+    script: "#!/bin/bash\nset -x\n# To use Node.js 6.7.0, uncomment the following\
+      \ line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server\
+      \ and credentials\"\n# get mfpserver url, username and password\n\n credentials=$(cf\
+      \ service-key $INSTANCE_NAME Credentials-1)\n echo \"Credentials: $credentials\"\
+      \n password=$(echo $credentials | grep \\\"password\\\": | awk -F \"\\\"password\\\
+      \": \" '{print $2 }' | awk -F , '{print $1 }' | sed 's/.\\(.*\\)/\\1/' | sed\
+      \ 's/\\(.*\\)./\\1/')\n echo \"Password: $password\"\n url=$(echo $credentials\
+      \ | grep \\\"url\\\": | awk -F \"\\\"url\\\": \" '{print $2 }' | awk -F , '{print\
+      \ $1 }' | sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/' | sed -e 's/https/http/g')\
+      \ \n echo \"URL: $url\"\n user=$(echo $credentials | grep \\\"user\\\": | awk\
+      \ -F \"\\\"user\\\": \" '{print $2 }' | awk -F , '{print $1 }' | awk -F \\ \
+      \ '{print $1 }'| sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"\
+      User: $user\"\n\nurl=$url:80\necho \"#### npm install -g mfpdev-cli\"\nnpm install\
+      \ -g mfpdev-cli\necho \"#### mfpdev --version\"\nmfpdev --version\necho \"####\
+      \ cd adapters/JavaAdapter\"\ncd adapters/JavaAdapter\necho \"#### adding server\
+      \ definition\"\nmfpdev server add server1 --url $url --login $user --password\
+      \ $password --setdefault\necho \"#### Deploy Adapter : mfpdev adapter deploy\"\
+      \nmfpdev adapter deploy\n"
+- name: AdapterTest-UnitTests
+  inputs:
+  - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
+    type: git
+    branch: master
+    service: ${SAMPLE_REPO}
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: TestAdapter
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: adapters-tool-chain-mfp-cloud
+    script: "#!/bin/bash\nset -x\n# To use Node.js 6.7.0, uncomment the following\
+      \ line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server\
+      \ and credentials\"\n# get mfpserver url, username and password\n\n credentials=$(cf\
+      \ service-key $INSTANCE_NAME Credentials-1)\n echo \"Credentials: $credentials\"\
+      \n password=$(echo $credentials | grep \\\"password\\\": | awk -F \"\\\"password\\\
+      \": \" '{print $2 }' | awk -F , '{print $1 }' | sed 's/.\\(.*\\)/\\1/' | sed\
+      \ 's/\\(.*\\)./\\1/')\n echo \"Password: $password\"\n url=$(echo $credentials\
+      \ | grep \\\"url\\\": | awk -F \"\\\"url\\\": \" '{print $2 }' | awk -F , '{print\
+      \ $1 }' | sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/' | sed -e 's/https/http/g')\
+      \ \n echo \"URL: $url\"\n user=$(echo $credentials | grep \\\"user\\\": | awk\
+      \ -F \"\\\"user\\\": \" '{print $2 }' | awk -F , '{print $1 }' | awk -F \\ \
+      \ '{print $1 }'| sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"\
+      User: $user\"\n\nurl=$url:80\necho \"#### npm install -g mfpdev-cli\"\nnpm install\
+      \ -g mfpdev-cli\necho \"#### mfpdev --version\"\nmfpdev --version\necho \"####\
+      \ adding server definition\"\nmfpdev server add server1 --url $url --login $user\
+      \ --password $password --setdefault\n\necho \"#### cd adapters/JavaAdapter/tests\"\
+      \ncd adapters/JavaAdapter/tests\necho \"#### Testing Adapter Endpoints\"\n./resource.sh\n\
+      ./resource_greet.sh\n./resource_protected.sh\n./resource_testpost.sh"
+
+- name: BuildApp-Fastlane
+  inputs:
+  - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
+    type: git
+    branch: master
+    service: ${SAMPLE_REPO}
+    dir_name: null
+  triggers:
+  - type: commit
+  properties:
+  - name: gitPushUser
+    value: ShinojEdakkara
+    type: text
+  - name: gitPushToken
+    value: 3cf97c7d0267db76dc80ece49fb7c03934091fc0
+    type: text
+  - name: gitPushEmail
+    value: shinojedakkara@gmail.com
+    type: text
+  - name: apkGitPushUrl
+    value: https://$gitPushToken:x-oauth-basic@github.com/ShinojEdakkara/mfp-apps
+      master
+    type: text
+  jobs:
+  - name: Build
+    type: builder
+    artifact_dir: ''
+    build_type: shell
+    script: |+
+      #!/bin/bash
+      export JAVA_HOME=/opt/IBM/java8
+      cd /home/pipeline
+
+      # Android sdk
+      wget https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip
+      sudo apt-get install unzip
+      unzip /home/pipeline/sdk-tools-linux-3859397.zip
+      echo 'y' | /home/pipeline/tools/bin/sdkmanager --licenses
+      echo 'y' | /home/pipeline/tools/bin/sdkmanager "platform-tools" "platforms;android-26"
+
+      # Prereq for installing Fastlane: Install RVM
+      gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+      \curl -L https://get.rvm.io | bash -s stable --ruby
+      source /home/pipeline/.rvm/scripts/rvm get stable --autolibs=enable
+      gem -v
+
+      # Install Fastlane
+      gem install fastlane -NV
+
+      # Build the apk file
+      cd /home/pipeline/$BUILD_ID/apps/ResourceRequestAndroid
+      fastlane beta
+
+      mkdir /home/pipeline/temp
+      cp ./app/build/outputs/apk/app-release.apk /home/pipeline/temp
+      mkdir /home/pipeline/appupload
+
+      # Push the generated apk for git hub for testing
+      git config --global user.name $gitPushUser
+      git config --global user.email $gitPushEmail
+      git config --global push.default matching
+      cd /home/pipeline/appupload
+
+      git clone https://github.com/ShinojEdakkara/mfp-apps.git .
+      ls
+      rm -rf
+
+      cp /home/pipeline/temp/app-release.apk .
+      git add app-release.apk
+      git commit -m "released a new version of apk - build : ($BUILD_ID)"
+      echo $apkGitPushUrl
+      git push $apkGitPushUrl
+
+- name: RegisterApp
+  inputs:
+  - type: job
+    stage: BuildApp-Fastlane
+    job: Build
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: DeployApps
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: apps-tool-chain-mfp-cloud
+    script: "#!/bin/bash\n\n# To use Node.js 6.7.0, uncomment the following line:\n\
+      export PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server and credentials\"\
+      \n# get mfpserver url, username and password\n\n credentials=$(cf service-key\
+      \ $INSTANCE_NAME Credentials-1)\n echo \"Credentials: $credentials\"\n password=$(echo\
+      \ $credentials | grep \\\"password\\\": | awk -F \"\\\"password\\\": \" '{print\
+      \ $2 }' | awk -F , '{print $1 }' | sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\\
+      1/')\n echo \"Password: $password\"\n url=$(echo $credentials | grep \\\"url\\\
+      \": | awk -F \"\\\"url\\\": \" '{print $2 }' | awk -F , '{print $1 }' | sed\
+      \ 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/' | sed -e 's/https/http/g') \n\
+      \ echo \"URL: $url\"\n user=$(echo $credentials | grep \\\"user\\\": | awk -F\
+      \ \"\\\"user\\\": \" '{print $2 }' | awk -F , '{print $1 }' | awk -F \\  '{print\
+      \ $1 }'| sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"User: $user\"\
+      \n\nurl=$url:80\necho \"#### npm install -g mfpdev-cli\"\nnpm install -g mfpdev-cli\n\
+      echo \"#### mfpdev --version\"\nmfpdev --version\necho \"#### cd apps/ResourceRequestAndroid\"\
+      \ncd apps/ResourceRequestAndroid\n#echo \"#### adding server definition\"\n\
+      mfpdev server add server1 --url $url --login $user --password $password --setdefault\n\
+      echo \"#### Register App with MFP Server : mfpdev app register\"\nmfpdev app\
+      \ register\n\n"
+- name: TEST-Appium
+  inputs:
+  - url: https://github.com/ShinojEdakkara/test-repo-mfp.git
+    type: git
+    branch: master
+    service: ${TEST_REPO}
+    dir_name: null
+  triggers:
+  - type: stage
+  properties:
+  - name: screenshot_dir
+    value: /home/pipeline/home/pipeline/$BUILD_ID/target
+    type: text
+  - name: applicationPath
+    value: https://github.com/ShinojEdakkara/mfp-apps/raw/master/app-release.apk
+    type: text
+  - name: executionType
+    value: clientside
+    type: text
+  - name: test
+    value: AndroidAppiumExampleTest
+    type: text
+  - name: bitbarApiKey
+    value: oAIdCaufIQBh9Jc0GZvEgEA3sgkPr0MD
+    type: text
+  - name: testdroid_project
+    value: SimpleAndroidTestProject
+    type: text
+  jobs:
+  - name: Test the app using Appium scripts on Bitbar
+    type: builder
+    fail_stage: false
+    artifact_dir: ''
+    build_type: maven
+    script: |-
+      #!/bin/bash
+      cd /home/pipeline/$BUILD_ID/appium/sample-scripts/java
+      mvn clean install -X -Dtest=$test -DexecutionType=$executionType -DapiKey=$bitbarApiKey -DapplicationPath=$applicationPath -Dtestdroid_project=$testdroid_project
+- name: Delete MFP
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: TeardownMFPServer
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: MFPInstanceDeletion
+    script: |
+      #!/bin/bash
+      cf dsk -f $INSTANCE_NAME-Analytics Credentials-1
+      cf ds -f $INSTANCE_NAME-Analytics
+      cf dsk -f $INSTANCE_NAME Credentials-1
+      cf ds -f $INSTANCE_NAME
+      cf d -f $INSTANCE_NAME-Server
+      exit
+hooks:
+- enabled: true
+  label: null
+  ssl_enabled: false
+  url: https://devops-api.ng.bluemix.net/v1/messaging/webhook/publish

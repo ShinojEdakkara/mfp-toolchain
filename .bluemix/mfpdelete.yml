@@ -1,6 +1,6 @@
 ---
 stages:
-- name: MyStage
+- name: Delete MFP
   properties:
   - name: INSTANCE_NAME
     value: mfp-sz-test

@@ -1,6 +1,6 @@
 ---
 stages:
-- name: MyStage
+- name: Setup MFP 
   properties:
   - name: INSTANCE_NAME
     value: mfp-sz-test

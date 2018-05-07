@@ -1,0 +1,31 @@
+---
+stages:
+- name: MyStage
+  properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
+  jobs:
+  - name: TeardownMFPServer
+    type: deployer
+    deploy_permission: DEV_IN_SPACE
+    deploy_type: cf
+    target:
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: MFPInstanceDeletion
+    script: |
+      #!/bin/bash
+      cf dsk -f $INSTANCE_NAME-Analytics Credentials-1
+      cf ds -f $INSTANCE_NAME-Analytics
+      cf dsk -f $INSTANCE_NAME Credentials-1
+      cf ds -f $INSTANCE_NAME
+      cf d -f $INSTANCE_NAME-Server
+      exit
+hooks:
+- enabled: true
+  label: null
+  ssl_enabled: false
+  url: https://devops-api.ng.bluemix.net/v1/messaging/webhook/publish
+

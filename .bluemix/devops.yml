@@ -78,7 +78,7 @@ stages:
   inputs:
   - type: job
     stage: AdapterBuild
-    job: Build
+    job: Adapter Build
     dir_name: null
   triggers:
   - type: stage
@@ -233,7 +233,7 @@ stages:
   inputs:
   - type: job
     stage: BuildApp-Fastlane
-    job: Build
+    job: App Build
     dir_name: null
   triggers:
   - type: stage

@@ -1,6 +1,6 @@
 ---
 stages:
-- name: Setup MFP
+- name: SetUp Mobile Foundation
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
     type: git
@@ -14,7 +14,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: Deploy
+  - name: SetUp Mobile Foundation
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -58,7 +58,7 @@ stages:
   triggers:
   - type: stage
   jobs:
-  - name: Build
+  - name: Adapter Build
     type: builder
     artifact_dir: ''
     build_type: npm
@@ -87,7 +87,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: DeployAdapter
+  - name: Adapter Deploy
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -128,7 +128,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: TestAdapter
+  - name: Adapter Test
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -180,7 +180,7 @@ stages:
       master
     type: text
   jobs:
-  - name: Build
+  - name: App Build
     type: builder
     artifact_dir: ''
     build_type: shell
@@ -242,7 +242,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: DeployApps
+  - name: App Deploy
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -298,7 +298,7 @@ stages:
     value: SimpleAndroidTestProject
     type: text
   jobs:
-  - name: Test the app using Appium scripts on Bitbar
+  - name: App Unit Tests
     type: builder
     fail_stage: false
     artifact_dir: ''
@@ -307,7 +307,7 @@ stages:
       #!/bin/bash
       cd /home/pipeline/$BUILD_ID/appium/sample-scripts/java
       mvn clean install -X -Dtest=$test -DexecutionType=$executionType -DapiKey=$bitbarApiKey -DapplicationPath=$applicationPath -Dtestdroid_project=$testdroid_project
-- name: Delete MFP
+- name: TearDown Mobile Foundation
   triggers:
   - type: stage
   properties:
@@ -315,7 +315,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: TeardownMFPServer
+  - name: TearDown Mobile Foundation
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf

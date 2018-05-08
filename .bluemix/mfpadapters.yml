@@ -44,10 +44,10 @@ stages:
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
     target:
-      region_id: ibm:yp:us-south
-      organization: shinoj.zacharias@in.ibm.com
-      space: dev
-      application: adapters-tool-chain-mfp-cloud
+      region_id: ${PROD_REGION_ID}
+      organization: ${PROD_ORG_NAME}
+      space: ${PROD_SPACE_NAME}
+      application: ${CF_APP_NAME}
     script: "#!/bin/bash\nset -x\n# To use Node.js 6.7.0, uncomment the following\
       \ line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server\
       \ and credentials\"\n# get mfpserver url, username and password\n\n credentials=$(cf\
@@ -85,10 +85,10 @@ stages:
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
     target:
-      region_id: ibm:yp:us-south
-      organization: shinoj.zacharias@in.ibm.com
-      space: dev
-      application: adapters-tool-chain-mfp-cloud
+      region_id: ${PROD_REGION_ID}
+      organization: ${PROD_ORG_NAME}
+      space: ${PROD_SPACE_NAME}
+      application: ${CF_APP_NAME}
     script: "#!/bin/bash\nset -x\n# To use Node.js 6.7.0, uncomment the following\
       \ line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server\
       \ and credentials\"\n# get mfpserver url, username and password\n\n credentials=$(cf\

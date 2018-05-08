@@ -1,6 +1,6 @@
 ---
 stages:
-- name: Setup MFP 
+- name: Setup MFP
   properties:
   - name: INSTANCE_NAME
     value: mfp-sz-test
@@ -11,10 +11,10 @@ stages:
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
     target:
-      region_id: ibm:yp:us-south
-      organization: shinoj.zacharias@in.ibm.com
-      space: dev
-      application: MFP80DevOps
+      region_id: ${PROD_REGION_ID}
+      organization: ${PROD_ORG_NAME}
+      space: ${PROD_SPACE_NAME}
+      application: ${CF_APP_NAME}
     script: |-
       #!/bin/bash
             token=$(cf oauth-token | awk '{print $2}')
@@ -45,4 +45,3 @@ hooks:
   label: null
   ssl_enabled: false
   url: https://devops-api.ng.bluemix.net/v1/messaging/webhook/publish
-

@@ -48,7 +48,7 @@ stages:
             # Deploying the confidential client
             curl -u $user:$password -X PUT -H "Content-Type: application/json" -d '{"clients":[{"id":"test","displayName":"Test","secret":"test","allowedScope":"*"},{"id": "admin","displayName": "admin","secret": "darwIn$hfr","allowedScope": "push.* mfp.admin.plugins settings.read"},{"id": "push","displayName": "push","secret": "darwIn$hfr","allowedScope": "authorization.introspect"}]}' $url/mfpadmin/management-apis/2.0/runtimes/mfp/confidentialclients
             exit
-- name: AdapterBuild
+- name: Build Adapter
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
     type: git
@@ -58,7 +58,7 @@ stages:
   triggers:
   - type: stage
   jobs:
-  - name: Adapter Build
+  - name: BuildAdapter
     type: builder
     artifact_dir: ''
     build_type: npm
@@ -74,11 +74,11 @@ stages:
       cd adapters/JavaAdapter
       echo "#### Build the adapter : mfpdev adapter build"
       mfpdev adapter build
-- name: AdapterDeploy
+- name: Deploy Adapter
   inputs:
   - type: job
-    stage: AdapterBuild
-    job: Adapter Build
+    stage: Build Adapter
+    job: BuildAdapter
     dir_name: null
   triggers:
   - type: stage
@@ -87,7 +87,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: Adapter Deploy
+  - name: DeployAdapter
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -114,7 +114,7 @@ stages:
       \ definition\"\nmfpdev server add server1 --url $url --login $user --password\
       \ $password --setdefault\necho \"#### Deploy Adapter : mfpdev adapter deploy\"\
       \nmfpdev adapter deploy\n"
-- name: AdapterTest-UnitTests
+- name: Test Adapter
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
     type: git
@@ -128,7 +128,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: Adapter Test
+  - name: TestAdapter
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -156,7 +156,7 @@ stages:
       \ncd adapters/JavaAdapter/tests\necho \"#### Testing Adapter Endpoints\"\n./resource.sh\n\
       ./resource_greet.sh\n./resource_protected.sh\n./resource_testpost.sh"
 
-- name: BuildApp-Fastlane
+- name: Build App with Fastlane
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
     type: git
@@ -180,7 +180,7 @@ stages:
       master
     type: text
   jobs:
-  - name: App Build
+  - name: BuildApp
     type: builder
     artifact_dir: ''
     build_type: shell
@@ -229,11 +229,11 @@ stages:
       echo $apkGitPushUrl
       git push $apkGitPushUrl
 
-- name: RegisterApp
+- name: Register App
   inputs:
   - type: job
-    stage: BuildApp-Fastlane
-    job: App Build
+    stage: Build App with Fastlane
+    job: BuildApp
     dir_name: null
   triggers:
   - type: stage
@@ -242,7 +242,7 @@ stages:
     value: mfp-sz-test
     type: text
   jobs:
-  - name: App Deploy
+  - name: RegisterApp
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
@@ -269,7 +269,7 @@ stages:
       mfpdev server add server1 --url $url --login $user --password $password --setdefault\n\
       echo \"#### Register App with MFP Server : mfpdev app register\"\nmfpdev app\
       \ register\n\n"
-- name: TEST-Appium
+- name: Test App on Bitbar
   inputs:
   - url: https://github.com/ShinojEdakkara/test-repo-mfp.git
     type: git

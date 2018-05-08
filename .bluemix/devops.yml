@@ -1,6 +1,14 @@
 ---
 stages:
 - name: Setup MFP
+  inputs:
+  - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
+    type: git
+    branch: master
+    service: ${SAMPLE_REPO}
+    dir_name: null
+  triggers:
+  - type: commit
   properties:
   - name: INSTANCE_NAME
     value: mfp-sz-test
@@ -48,7 +56,7 @@ stages:
     service: ${SAMPLE_REPO}
     dir_name: null
   triggers:
-  - type: commit
+  - type: stage
   jobs:
   - name: Build
     type: builder
@@ -156,7 +164,7 @@ stages:
     service: ${SAMPLE_REPO}
     dir_name: null
   triggers:
-  - type: commit
+  - type: stage
   properties:
   - name: gitPushUser
     value: ShinojEdakkara
@@ -300,6 +308,8 @@ stages:
       cd /home/pipeline/$BUILD_ID/appium/sample-scripts/java
       mvn clean install -X -Dtest=$test -DexecutionType=$executionType -DapiKey=$bitbarApiKey -DapplicationPath=$applicationPath -Dtestdroid_project=$testdroid_project
 - name: Delete MFP
+  triggers:
+  - type: stage
   properties:
   - name: INSTANCE_NAME
     value: mfp-sz-test

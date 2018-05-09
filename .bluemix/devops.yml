@@ -166,7 +166,7 @@ stages:
   triggers:
   - type: stage
   properties:
- - name: appPublishUrl
+  - name: appPublishUrl
     value: https://github.com/ShinojEdakkara/mfp-apps.git
     type: text
   - name: gitPushUser

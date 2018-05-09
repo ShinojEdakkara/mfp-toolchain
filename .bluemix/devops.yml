@@ -152,10 +152,17 @@ stages:
       User: $user\"\n\nurl=$url:80\necho \"#### npm install -g mfpdev-cli\"\nnpm install\
       \ -g mfpdev-cli\necho \"#### mfpdev --version\"\nmfpdev --version\necho \"####\
       \ adding server definition\"\nmfpdev server add server1 --url $url --login $user\
-      \ --password $password --setdefault\n\necho \"#### cd adapters/JavaAdapter/tests\"\
-      \ncd adapters/JavaAdapter/tests\necho \"#### Testing Adapter Endpoints\"\n./resource.sh\n\
-      ./resource_greet.sh\n./resource_protected.sh\n./resource_testpost.sh"
-
+      \ --password $password --setdefault\n\n# Make sure to have the test confidential\
+      \ client. Try another attempt to deploy test confidential client\ncurl -u $user:$password\
+      \ -X PUT -H \"Content-Type: application/json\" -d '{\"clients\":[{\"id\":\"\
+      test\",\"displayName\":\"Test\",\"secret\":\"test\",\"allowedScope\":\"*\"},{\"\
+      id\": \"admin\",\"displayName\": \"admin\",\"secret\": \"darwIn$hfr\",\"allowedScope\"\
+      : \"push.* mfp.admin.plugins settings.read\"},{\"id\": \"push\",\"displayName\"\
+      : \"push\",\"secret\": \"darwIn$hfr\",\"allowedScope\": \"authorization.introspect\"\
+      }]}' $url/mfpadmin/management-apis/2.0/runtimes/mfp/confidentialclients\n\n\
+      echo \"#### cd adapters/JavaAdapter/tests\"\ncd adapters/JavaAdapter/tests\n\
+      echo \"#### Testing Adapter Endpoints\"\n./resource.sh\n./resource_greet.sh\n\
+      ./resource_protected.sh\n./resource_testpost.sh"  
 - name: Build App with Fastlane
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git

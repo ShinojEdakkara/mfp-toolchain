@@ -166,14 +166,17 @@ stages:
   triggers:
   - type: stage
   properties:
+ - name: appPublishUrl
+    value: https://github.com/ShinojEdakkara/mfp-apps.git
+    type: text
   - name: gitPushUser
     value: ShinojEdakkara
     type: text
-  - name: gitPushToken
-    value: 3cf97c7d0267db76dc80ece49fb7c03934091fc0
-    type: text
   - name: gitPushEmail
     value: shinojedakkara@gmail.com
+    type: text
+  - name: gitPushToken
+    value: 3cf97c7d0267db76dc80ece49fb7c03934091fc0
     type: text
   - name: apkGitPushUrl
     value: https://$gitPushToken:x-oauth-basic@github.com/ShinojEdakkara/mfp-apps
@@ -219,7 +222,7 @@ stages:
       git config --global push.default matching
       cd /home/pipeline/appupload
 
-      git clone https://github.com/ShinojEdakkara/mfp-apps.git .
+      git clone $appPublishUrl .
       ls
       rm -rf
 

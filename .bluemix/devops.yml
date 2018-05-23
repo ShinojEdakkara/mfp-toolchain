@@ -162,7 +162,7 @@ stages:
       }]}' $url/mfpadmin/management-apis/2.0/runtimes/mfp/confidentialclients\n\n\
       echo \"#### cd adapters/JavaAdapter/tests\"\ncd adapters/JavaAdapter/tests\n\
       echo \"#### Testing Adapter Endpoints\"\n./resource.sh\n./resource_greet.sh\n\
-      ./resource_protected.sh\n./resource_testpost.sh"  
+      ./resource_protected.sh\n./resource_testpost.sh"
 - name: Build App with Fastlane
   inputs:
   - url: https://git.ng.bluemix.net/shinoj.zacharias/MFP80DevOps.git
@@ -173,6 +173,9 @@ stages:
   triggers:
   - type: stage
   properties:
+  - name: INSTANCE_NAME
+    value: mfp-sz-test
+    type: text
   - name: appPublishUrl
     value: https://github.com/ShinojEdakkara/mfp-apps.git
     type: text
@@ -191,94 +194,48 @@ stages:
     type: text
   jobs:
   - name: BuildApp
-    type: builder
-    artifact_dir: ''
-    build_type: shell
-    script: |+
-      #!/bin/bash
-      export JAVA_HOME=/opt/IBM/java8
-      cd /home/pipeline
-
-      # Android sdk
-      wget https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip
-      sudo apt-get install unzip
-      unzip /home/pipeline/sdk-tools-linux-3859397.zip
-      echo 'y' | /home/pipeline/tools/bin/sdkmanager --licenses
-      echo 'y' | /home/pipeline/tools/bin/sdkmanager "platform-tools" "platforms;android-26"
-
-      # Prereq for installing Fastlane: Install RVM
-      gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-      \curl -L https://get.rvm.io | bash -s stable --ruby
-      source /home/pipeline/.rvm/scripts/rvm get stable --autolibs=enable
-      gem -v
-
-      # Install Fastlane
-      gem install fastlane -NV
-
-      # Build the apk file
-      cd /home/pipeline/$BUILD_ID/apps/ResourceRequestAndroid
-      fastlane beta
-
-      mkdir /home/pipeline/temp
-      cp ./app/build/outputs/apk/app-release.apk /home/pipeline/temp
-      mkdir /home/pipeline/appupload
-
-      # Push the generated apk for git hub for testing
-      git config --global user.name $gitPushUser
-      git config --global user.email $gitPushEmail
-      git config --global push.default matching
-      cd /home/pipeline/appupload
-
-      git clone $appPublishUrl .
-      ls
-      rm -rf
-
-      cp /home/pipeline/temp/app-release.apk .
-      git add app-release.apk
-      git commit -m "released a new version of apk - build : ($BUILD_ID)"
-      echo $apkGitPushUrl
-      git push $apkGitPushUrl
-
-- name: Register App
-  inputs:
-  - type: job
-    stage: Build App with Fastlane
-    job: BuildApp
-    dir_name: null
-  triggers:
-  - type: stage
-  properties:
-  - name: INSTANCE_NAME
-    value: mfp-sz-test
-    type: text
-  jobs:
-  - name: RegisterApp
     type: deployer
     deploy_permission: DEV_IN_SPACE
     deploy_type: cf
     target:
-      region_id: ${PROD_REGION_ID}
-      organization: ${PROD_ORG_NAME}
-      space: ${PROD_SPACE_NAME}
-      application: ${CF_APP_NAME}
-    script: "#!/bin/bash\n\n# To use Node.js 6.7.0, uncomment the following line:\n\
-      export PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\necho \"Getting server and credentials\"\
-      \n# get mfpserver url, username and password\n\n credentials=$(cf service-key\
-      \ $INSTANCE_NAME Credentials-1)\n echo \"Credentials: $credentials\"\n password=$(echo\
-      \ $credentials | grep \\\"password\\\": | awk -F \"\\\"password\\\": \" '{print\
-      \ $2 }' | awk -F , '{print $1 }' | sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\\
-      1/')\n echo \"Password: $password\"\n url=$(echo $credentials | grep \\\"url\\\
-      \": | awk -F \"\\\"url\\\": \" '{print $2 }' | awk -F , '{print $1 }' | sed\
-      \ 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/' | sed -e 's/https/http/g') \n\
-      \ echo \"URL: $url\"\n user=$(echo $credentials | grep \\\"user\\\": | awk -F\
-      \ \"\\\"user\\\": \" '{print $2 }' | awk -F , '{print $1 }' | awk -F \\  '{print\
-      \ $1 }'| sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"User: $user\"\
-      \n\nurl=$url:80\necho \"#### npm install -g mfpdev-cli\"\nnpm install -g mfpdev-cli\n\
-      echo \"#### mfpdev --version\"\nmfpdev --version\necho \"#### cd apps/ResourceRequestAndroid\"\
+      region_id: ibm:yp:us-south
+      organization: shinoj.zacharias@in.ibm.com
+      space: dev
+      application: devops-mfp-devops-20180523071210733
+    script: "# To use Node.js 6.7.0, uncomment the following line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\
+      \necho \"Getting server and credentials\"\n# get mfpserver url, username and\
+      \ password\n\n credentials=$(cf service-key $INSTANCE_NAME Credentials-1)\n\
+      \ echo \"Credentials: $credentials\"\n password=$(echo $credentials | grep \\\
+      \"password\\\": | awk -F \"\\\"password\\\": \" '{print $2 }' | awk -F , '{print\
+      \ $1 }' | sed 's/.\\(.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"Password:\
+      \ $password\"\n url=$(echo $credentials | grep \\\"url\\\": | awk -F \"\\\"\
+      url\\\": \" '{print $2 }' | awk -F , '{print $1 }' | sed 's/.\\(.*\\)/\\1/'\
+      \ | sed 's/\\(.*\\)./\\1/' | sed -e 's/https/http/g') \n echo \"URL: $url\"\n\
+      \ user=$(echo $credentials | grep \\\"user\\\": | awk -F \"\\\"user\\\": \"\
+      \ '{print $2 }' | awk -F , '{print $1 }' | awk -F \\  '{print $1 }'| sed 's/.\\\
+      (.*\\)/\\1/' | sed 's/\\(.*\\)./\\1/')\n echo \"User: $user\"\n\nurl=$url:80\n\
+      echo \"#### npm install -g mfpdev-cli\"\nnpm install -g mfpdev-cli\necho \"\
+      #### mfpdev --version\"\nmfpdev --version\necho \"#### cd apps/ResourceRequestAndroid\"\
       \ncd apps/ResourceRequestAndroid\n#echo \"#### adding server definition\"\n\
       mfpdev server add server1 --url $url --login $user --password $password --setdefault\n\
       echo \"#### Register App with MFP Server : mfpdev app register\"\nmfpdev app\
-      \ register\n\n"
+      \ register\n\n\nexport JAVA_HOME=/opt/IBM/java8\ncd /home/pipeline\n\n# Android\
+      \ sdk\nwget https://dl.google.com/android/repository/sdk-tools-linux-3859397.zip\n\
+      sudo apt-get install unzip\nunzip /home/pipeline/sdk-tools-linux-3859397.zip\n\
+      echo 'y' | /home/pipeline/tools/bin/sdkmanager --licenses\necho 'y' | /home/pipeline/tools/bin/sdkmanager\
+      \ \"platform-tools\" \"platforms;android-26\"\n\n# Prereq for installing Fastlane:\
+      \ Install RVM\ngpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3\
+      \ 7D2BAF1CF37B13E2069D6956105BD0E739499BDB\n\\curl -L https://get.rvm.io | bash\
+      \ -s stable --ruby\nsource /home/pipeline/.rvm/scripts/rvm get stable --autolibs=enable\n\
+      gem -v\n\n# Install Fastlane\ngem install fastlane -NV\n\n# Build the apk file\n\
+      cd /home/pipeline/$BUILD_ID/apps/ResourceRequestAndroid\nfastlane beta\n\nmkdir\
+      \ /home/pipeline/temp\ncp ./app/build/outputs/apk/app-release.apk /home/pipeline/temp\n\
+      mkdir /home/pipeline/appupload\n\n# Push the generated apk for git hub for testing\n\
+      git config --global user.name $gitPushUser\ngit config --global user.email $gitPushEmail\n\
+      git config --global push.default matching\ncd /home/pipeline/appupload\n\ngit\
+      \ clone $appPublishUrl .\nls\nrm -rf\n\ncp /home/pipeline/temp/app-release.apk\
+      \ .\ngit add app-release.apk\ngit commit -m \"released a new version of apk\
+      \ - build : ($BUILD_ID)\"\necho $apkGitPushUrl\ngit push $apkGitPushUrl"
 - name: Test App on Bitbar
   inputs:
   - url: https://github.com/ShinojEdakkara/test-repo-mfp.git
@@ -302,7 +259,7 @@ stages:
     value: AndroidAppiumExampleTest
     type: text
   - name: bitbarApiKey
-    value: oAIdCaufIQBh9Jc0GZvEgEA3sgkPr0MD
+    value: NuPAXVCXzdNXq5KDr8e8OcF4qaGMtBou
     type: text
   - name: testdroid_project
     value: SimpleAndroidTestProject

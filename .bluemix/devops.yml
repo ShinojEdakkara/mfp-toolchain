@@ -293,6 +293,7 @@ stages:
       application: ${CF_APP_NAME}
     script: |
       #!/bin/bash
+      sleep 60
       cf dsk -f $INSTANCE_NAME-Analytics Credentials-1
       cf ds -f $INSTANCE_NAME-Analytics
       cf dsk -f $INSTANCE_NAME Credentials-1

@@ -202,7 +202,7 @@ stages:
       organization: shinoj.zacharias@in.ibm.com
       space: dev
       application: devops-mfp-devops-20180523071210733
-    script: "# To use Node.js 6.7.0, uncomment the following line:\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\
+    script: "# To use Node.js 6.7.0, uncomment the following line:\nexport LANG=en_US.UTF-8\n\nexport PATH=/opt/IBM/node-v6.7.0/bin:$PATH\n\
       \necho \"Getting server and credentials\"\n# get mfpserver url, username and\
       \ password\n\n credentials=$(cf service-key $INSTANCE_NAME Credentials-1)\n\
       \ echo \"Credentials: $credentials\"\n password=$(echo $credentials | grep \\\
